@@ -18,7 +18,19 @@ void settingMenu();
 
 struct toado { int x, y; };
 struct flap { toado td; float angle; } bird; 
-struct Barrier { toado br[10]; } BR;
+
+enum ItemType { ITEM_NONE = 0, ITEM_SHIELD, ITEM_SLOW, ITEM_FAST };
+struct Item {
+    ItemType type;
+    int y;
+    int x_offset;
+    bool active;
+};
+
+struct Barrier { 
+    toado br[10]; 
+    Item items[10];
+} BR;
 
 int highScore = 0;
 int currentScore = 0;
@@ -26,6 +38,11 @@ char playerName[50];
 struct HighScoreEntry { char name[50]; int score; } topScores[3];
 int musicOn = 1, soundOn = 1, difficulty = 2, speed = 5, gravity = 5;
 int base_speed = 5, base_gravity = 5; 
+
+// Power-up States
+bool hasShield = false;
+int slowTimer = 0;
+int fastTimer = 0; 
 
 // =========================================================================
 // �I?M TP2: THU?T TO�N V? �U?NG TH?NG, �U?NG TR�N & T� M�U �? QUY
@@ -138,6 +155,31 @@ void DrawSun() {
     setfillstyle(1, WHITE);
     setcolor(WHITE);
     fillellipse(cx, cy, 20, 20);
+}
+
+void DrawItem(int x, int y, ItemType type) {
+    if (type == ITEM_SHIELD) {
+        setfillstyle(1, LIGHTBLUE);
+        setcolor(LIGHTCYAN);
+        fillellipse(x, y, 12, 12);
+        BresenhamLine(x - 6, y, x + 6, y, WHITE);
+        BresenhamLine(x, y - 6, x, y + 6, WHITE);
+    } else if (type == ITEM_SLOW) {
+        setfillstyle(1, LIGHTGREEN);
+        setcolor(GREEN);
+        fillellipse(x, y, 12, 12);
+        setcolor(WHITE);
+        BresenhamLine(x, y - 5, x, y + 2, WHITE);
+        BresenhamLine(x, y + 2, x + 4, y + 2, WHITE);
+    } else if (type == ITEM_FAST) {
+        setfillstyle(1, YELLOW);
+        setcolor(LIGHTRED);
+        fillellipse(x, y, 12, 12);
+        BresenhamLine(x - 4, y - 5, x, y, LIGHTRED);
+        BresenhamLine(x, y, x - 4, y + 5, LIGHTRED);
+        BresenhamLine(x, y - 5, x + 4, y, LIGHTRED);
+        BresenhamLine(x + 4, y, x, y + 5, LIGHTRED);
+    }
 }
 
 void DrawGround() {
@@ -275,9 +317,26 @@ void RotatePoint(int &x, int &y, int cx, int cy, float angleDegree) {
 
 void init() {
     bird.td.x = 100; bird.td.y = 250; bird.angle = 0; 
+    hasShield = false;
+    slowTimer = 0;
+    fastTimer = 0;
+    
     for (int i = 0; i < 5; i++) {
         BR.br[i].x = 900 + i * 200;
         BR.br[i].y = rand() % 200 + 240;
+        
+        // Spawn item (First 2 columns are empty to let players adjust, 15% spawn chance in random scattered positions)
+        if (i >= 2 && rand() % 100 < 15) {
+            BR.items[i].type = (ItemType)(rand() % 3 + 1);
+            BR.items[i].active = true;
+            BR.items[i].y = rand() % 300 + 80;
+            BR.items[i].x_offset = rand() % 100 + 50;
+        } else {
+            BR.items[i].type = ITEM_NONE;
+            BR.items[i].active = false;
+            BR.items[i].y = 0;
+            BR.items[i].x_offset = 0;
+        }
     }
     currentScore = 0;
     base_speed = (difficulty == 1) ? 4 : (difficulty == 2) ? 5 : 7;
@@ -347,6 +406,26 @@ void BIRD() {
     RotatePoint(pupil_x, pupil_y, bx, by, a);
     BresenhamCircle(pupil_x, pupil_y, 3, BLACK);
     BoundaryFill(pupil_x, pupil_y, BLACK, BLACK);
+
+    // 6. Draw visual effects for active power-ups
+    if (hasShield) {
+        BresenhamCircle(bx, by, 28, LIGHTCYAN);
+        BresenhamCircle(bx, by, 29, BLUE);
+    }
+    if (fastTimer > 0) {
+        int tx1 = bx - 30, ty1 = by;
+        int tx2 = bx - 42, ty2 = by;
+        RotatePoint(tx1, ty1, bx, by, a);
+        RotatePoint(tx2, ty2, bx, by, a);
+        
+        setfillstyle(1, LIGHTRED);
+        setcolor(LIGHTRED);
+        fillellipse(tx1, ty1, 8, 6);
+        
+        setfillstyle(1, YELLOW);
+        setcolor(YELLOW);
+        fillellipse(tx2, ty2, 5, 4);
+    }
 }
 
 void DLBIRD() {
@@ -356,6 +435,22 @@ void DLBIRD() {
 }
 
 void control() {
+    // Decrement active timers
+    if (slowTimer > 0) slowTimer--;
+    if (fastTimer > 0) fastTimer--;
+
+    // Dynamic Speed & Gravity adjustment based on timers
+    if (fastTimer > 0) {
+        speed = base_speed * 2;
+        gravity = base_gravity;
+    } else if (slowTimer > 0) {
+        speed = (base_speed / 2 < 2) ? 2 : base_speed / 2;
+        gravity = (base_gravity / 2 < 2) ? 2 : base_gravity / 2;
+    } else {
+        speed = base_speed;
+        gravity = base_gravity;
+    }
+
     bird.td.y += gravity; 
     
     // Xoay chim t?nh ti?n (TP4)
@@ -365,10 +460,10 @@ void control() {
     if (kbhit()) { 
         char ch = getch(); 
         
-        if (ch == '0') { speed = 0; gravity = 0; } 
-        else if (ch == '1') { speed = base_speed / 2; gravity = base_gravity / 2; } 
-        else if (ch == '2') { speed = base_speed; gravity = base_gravity; } 
-        else if (ch == '3') { speed = base_speed * 2; gravity = base_gravity * 2; } 
+        if (ch == '0') { 
+            speed = 0; 
+            gravity = 0; 
+        } 
         else { 
             bird.td.y -= 70; 
             bird.angle = -30; 
@@ -385,26 +480,84 @@ void display() {
             BR.br[i].x = 1050;
             BR.br[i].y = rand() % 200 + 200;
             currentScore++;
+            
+            // Spawn random item for reset pipe (15% spawn chance in random scattered positions)
+            if (rand() % 100 < 15) {
+                BR.items[i].type = (ItemType)(rand() % 3 + 1);
+                BR.items[i].active = true;
+                BR.items[i].y = rand() % 300 + 80;
+                BR.items[i].x_offset = rand() % 100 + 50;
+            } else {
+                BR.items[i].type = ITEM_NONE;
+                BR.items[i].active = false;
+                BR.items[i].y = 0;
+                BR.items[i].x_offset = 0;
+            }
+        }
+        
+        // Item collision detection (scattered random positions, away from pipe mouths)
+        if (BR.items[i].active && BR.items[i].type != ITEM_NONE) {
+            int bird_x = bird.td.x;
+            int bird_y = bird.td.y;
+            int item_x = BR.br[i].x + BR.items[i].x_offset;
+            int item_y = BR.items[i].y;
+            
+            int dx = bird_x - item_x;
+            int dy = bird_y - item_y;
+            if (dx * dx + dy * dy <= 1024) {
+                BR.items[i].active = false;
+                if (BR.items[i].type == ITEM_SHIELD) {
+                    hasShield = true;
+                } else if (BR.items[i].type == ITEM_SLOW) {
+                    slowTimer = 250;
+                    fastTimer = 0;
+                } else if (BR.items[i].type == ITEM_FAST) {
+                    fastTimer = 150;
+                    slowTimer = 0;
+                }
+                playJumpSound();
+            }
         }
     }
     
     for (int i = 0; i < 5; i++) {
         DrawPipe(BR.br[i].x, BR.br[i].y, false);         // Bottom pipe
         DrawPipe(BR.br[i].x, BR.br[i].y - 190, true);    // Top pipe
+        if (BR.items[i].active && BR.items[i].type != ITEM_NONE) {
+            DrawItem(BR.br[i].x + BR.items[i].x_offset, BR.items[i].y, BR.items[i].type);
+        }
     }
 }
 
 void gameover(int &thua) {
     for (int i = 0; i < 5; i++) {
-        // C?p nh?t l?i t?a d? va ch?m ph� h?p v?i k�ch thu?c chim m?i
         if ((BR.br[i].x < bird.td.x + 25 && BR.br[i].x + 40 > bird.td.x - 30) && 
             (bird.td.y + 20 > BR.br[i].y || bird.td.y - 20 < BR.br[i].y - 190)) {
-            thua = 1; playCollisionSound();
-        }
-        else if (bird.td.y < 0 || bird.td.y > 450) {
-            thua = 1; playCollisionSound();
+            
+            if (fastTimer > 0) {
+                BR.br[i].x = -50; // Destroy pipe instantly!
+                playJumpSound();
+            } else if (hasShield) {
+                hasShield = false; // Consume shield
+                BR.br[i].x = -50; // Destroy pipe instantly to prevent getting stuck
+                playCollisionSound();
+            } else {
+                thua = 1;
+                playCollisionSound();
+            }
         }
     }
+    
+    if (bird.td.y < 0 || bird.td.y > 450) {
+        if (fastTimer > 0 || hasShield) {
+            if (bird.td.y < 0) bird.td.y = 10;
+            if (bird.td.y > 450) bird.td.y = 440;
+        } else {
+            thua = 1;
+            playCollisionSound();
+        }
+    }
+
     if (thua == 1 && currentScore > highScore) {
         highScore = currentScore;
     }
@@ -569,16 +722,30 @@ int main() {
             DrawGround();
             
             setcolor(15); settextstyle(3, 0, 1); setbkcolor(9);
-            outtextxy(10, 10, "Phim: 0(Dung) 1(Cham) 2(BinhThuong) 3(Nhanh)");
+            outtextxy(10, 10, "Vat pham: Khien Xanh (Bao ve) | Dong ho XanhLa (Cham) | Set Vang (Bay nhanh)");
 
-
-            // DLBIRD();
             control();
             BIRD();
             display();
             gameover(thua);
 
-                        char scoreText[50]; sprintf(scoreText, "Diem: %d", currentScore);
+            // Render power-up HUD
+            char statusText[100] = "";
+            if (hasShield) strcat(statusText, "KHIEN [BAT] ");
+            if (slowTimer > 0) {
+                char temp[30];
+                sprintf(temp, "CHAM [%d] ", slowTimer);
+                strcat(statusText, temp);
+            }
+            if (fastTimer > 0) {
+                char temp[30];
+                sprintf(temp, "NHANH [%d] ", fastTimer);
+                strcat(statusText, temp);
+            }
+            setfillstyle(1, 9); bar(500, 10, 780, 50);
+            setbkcolor(9); settextstyle(6, 0, 2); setcolor(14); outtextxy(500, 10, statusText);
+
+            char scoreText[50]; sprintf(scoreText, "Diem: %d", currentScore);
             setfillstyle(1, 9); bar(800, 10, 1050, 50);
             setbkcolor(9); settextstyle(6, 0, 2); setcolor(15); outtextxy(800, 10, scoreText);
 
