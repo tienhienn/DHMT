@@ -108,6 +108,38 @@ void DrawClouds() {
     fillellipse(900, 70, 40, 20); fillellipse(880, 80, 30, 15); fillellipse(920, 80, 30, 15);
 }
 
+void DrawSun() {
+    int cx = 550, cy = 80;
+    
+    // 1. Draw sun rays
+    int numRays = 12;
+    int rInner = 48;
+    int rOuter = 65;
+    for (int i = 0; i < numRays; i++) {
+        float angle = i * 2 * 3.14159265 / numRays;
+        int x1 = cx + rInner * cos(angle);
+        int y1 = cy + rInner * sin(angle);
+        int x2 = cx + rOuter * cos(angle);
+        int y2 = cy + rOuter * sin(angle);
+        BresenhamLine(x1, y1, x2, y2, YELLOW);
+    }
+    
+    // 2. Outer glow (LIGHTRED/Orange)
+    setfillstyle(1, LIGHTRED);
+    setcolor(LIGHTRED);
+    fillellipse(cx, cy, 42, 42);
+    
+    // 3. Middle body (YELLOW)
+    setfillstyle(1, YELLOW);
+    setcolor(YELLOW);
+    fillellipse(cx, cy, 35, 35);
+    
+    // 4. Inner core (WHITE glow)
+    setfillstyle(1, WHITE);
+    setcolor(WHITE);
+    fillellipse(cx, cy, 20, 20);
+}
+
 void DrawGround() {
     setfillstyle(1, 6); bar(0, 450, 1050, 600);
     setfillstyle(1, 10); bar(0, 450, 1050, 470);
@@ -531,6 +563,7 @@ int main() {
             
             setfillstyle(1, 9); bar(0, 0, 1050, 600);
             
+            DrawSun();
             DrawClouds();
             DrawFractalBackground();
             DrawGround();
