@@ -726,12 +726,7 @@ int main() {
             setcolor(15); settextstyle(6, 0, 1); setbkcolor(9);
             outtextxy(10, 10, "Vat pham: Khien Xanh (Bao ve) | Dong ho XanhLa (Cham) | Set Vang (Bay nhanh)");
 
-            control();
-            BIRD();
-            display();
-            gameover(thua);
-
-            // Render power-up HUD
+            // Render power-up HUD and Score
             char statusText[100] = "";
             if (hasShield) strcat(statusText, "KHIEN [BAT] ");
             if (slowTimer > 0) {
@@ -744,12 +739,15 @@ int main() {
                 sprintf(temp, "NHANH [%d] ", fastTimer);
                 strcat(statusText, temp);
             }
-            setfillstyle(1, 9); bar(10, 40, 500, 70);
-            setbkcolor(9); settextstyle(6, 0, 2); setcolor(14); outtextxy(10, 40, statusText);
+            settextstyle(6, 0, 2); setcolor(14); outtextxy(10, 40, statusText);
 
             char scoreText[50]; sprintf(scoreText, "Diem: %d", currentScore);
-            setfillstyle(1, 9); bar(800, 10, 1050, 50);
-            setbkcolor(9); settextstyle(6, 0, 2); setcolor(15); outtextxy(800, 10, scoreText);
+            settextstyle(6, 0, 2); setcolor(15); outtextxy(850, 40, scoreText);
+
+            control();
+            BIRD();
+            display();
+            gameover(thua);
 
             delay(20); 
             page = 1 - page;
