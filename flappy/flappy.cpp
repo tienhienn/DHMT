@@ -8,7 +8,7 @@
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
 
-// --- C�C H�M CO B?N ---
+// --- CAC HAM CO BAN ---
 void playBackgroundMusic();
 void stopBackgroundMusic();
 void playJumpSound();
@@ -19,7 +19,8 @@ void settingMenu();
 struct toado { int x, y; };
 struct flap { toado td; float angle; } bird; 
 
-enum ItemType { ITEM_NONE = 0, ITEM_SHIELD, ITEM_SLOW, ITEM_FAST };
+// Cap nhat loai vat pham: Khien, Phong To, Thu Nho
+enum ItemType { ITEM_NONE = 0, ITEM_SHIELD, ITEM_BIG, ITEM_SMALL };
 struct Item {
     ItemType type;
     int y;
@@ -39,20 +40,17 @@ struct HighScoreEntry { char name[50]; int score; } topScores[3];
 int musicOn = 1, soundOn = 1, difficulty = 2, speed = 5, gravity = 5;
 int base_speed = 5, base_gravity = 5; 
 
-// Power-up States
+// Trang thai Vat pham (Power-up States)
 bool hasShield = false;
-int slowTimer = 0;
-int fastTimer = 0; 
+int bigTimer = 0;   // Thoi gian hieu luc cua Phong to
+int smallTimer = 0; // Thoi gian hieu luc cua Thu nho
 
-// =========================================================================
-// �I?M TP2: THU?T TO�N V? �U?NG TH?NG, �U?NG TR�N & T� M�U �? QUY
-// =========================================================================
-
+/* * 1. THUAT TOAN BRESENHAM VE DUONG THANG TONG QUAT */
 void BresenhamLine(int x1, int y1, int x2, int y2, int color) {
     int dx = abs(x2 - x1), dy = abs(y2 - y1);
     int sx = (x1 < x2) ? 1 : -1;
     int sy = (y1 < y2) ? 1 : -1;
-    int err = dx - dy;
+    int err = dx - dy; 
     
     while (true) {
         putpixel(x1, y1, color);
@@ -63,9 +61,10 @@ void BresenhamLine(int x1, int y1, int x2, int y2, int color) {
     }
 }
 
+/* * 2. THUAT TOAN MIDPOINT / BRESENHAM VE DUONG TRON */
 void BresenhamCircle(int xc, int yc, int r, int color) {
     int x = 0, y = r;
-    int d = 3 - 2 * r;
+    int d = 3 - 2 * r; 
     while (y >= x) {
         putpixel(xc + x, yc + y, color); putpixel(xc - x, yc + y, color);
         putpixel(xc + x, yc - y, color); putpixel(xc - x, yc - y, color);
@@ -77,6 +76,7 @@ void BresenhamCircle(int xc, int yc, int r, int color) {
     }
 }
 
+/* * 3. THUAT TOAN TO MAU DA GIAC - BOUNDARY FILL 4 HUONG */
 void BoundaryFill(int x, int y, int fill_color, int boundary_color) {
     int current = getpixel(x, y);
     if (current != boundary_color && current != fill_color) {
@@ -88,9 +88,7 @@ void BoundaryFill(int x, int y, int fill_color, int boundary_color) {
     }
 }
 
-// =========================================================================
-// �I?M TP3: H�NH H?C FRACTAL 
-// =========================================================================
+/* * HAM VE DUONG CONG KOCH BANG DE QUY */
 void DrawKoch(int x1, int y1, int x2, int y2, int iter, int color) {
     float angle = 60 * 3.14159 / 180;
     if (iter == 0) {
@@ -100,14 +98,12 @@ void DrawKoch(int x1, int y1, int x2, int y2, int iter, int color) {
         int y3 = y1 + (y2 - y1) / 3;
         int x4 = x1 + 2 * (x2 - x1) / 3;
         int y4 = y1 + 2 * (y2 - y1) / 3;
-        
         int x_top = x3 + (x4 - x3) * cos(angle) - (y4 - y3) * sin(angle);
         int y_top = y3 + (x4 - x3) * sin(angle) + (y4 - y3) * cos(angle);
-
-        DrawKoch(x1, y1, x3, y3, iter - 1, color);
-        DrawKoch(x3, y3, x_top, y_top, iter - 1, color);
-        DrawKoch(x_top, y_top, x4, y4, iter - 1, color);
-        DrawKoch(x4, y4, x2, y2, iter - 1, color);
+        DrawKoch(x1, y1, x3, y3, iter - 1, color);         
+        DrawKoch(x3, y3, x_top, y_top, iter - 1, color);   
+        DrawKoch(x_top, y_top, x4, y4, iter - 1, color);   
+        DrawKoch(x4, y4, x2, y2, iter - 1, color);         
     }
 }
 
@@ -127,8 +123,6 @@ void DrawClouds() {
 
 void DrawSun() {
     int cx = 550, cy = 80;
-    
-    // 1. Draw sun rays
     int numRays = 12;
     int rInner = 48;
     int rOuter = 65;
@@ -140,45 +134,27 @@ void DrawSun() {
         int y2 = cy + rOuter * sin(angle);
         BresenhamLine(x1, y1, x2, y2, YELLOW);
     }
-    
-    // 2. Outer glow (LIGHTRED/Orange)
-    setfillstyle(1, LIGHTRED);
-    setcolor(LIGHTRED);
-    fillellipse(cx, cy, 42, 42);
-    
-    // 3. Middle body (YELLOW)
-    setfillstyle(1, YELLOW);
-    setcolor(YELLOW);
-    fillellipse(cx, cy, 35, 35);
-    
-    // 4. Inner core (WHITE glow)
-    setfillstyle(1, WHITE);
-    setcolor(WHITE);
-    fillellipse(cx, cy, 20, 20);
+    setfillstyle(1, LIGHTRED); setcolor(LIGHTRED); fillellipse(cx, cy, 42, 42);
+    setfillstyle(1, YELLOW); setcolor(YELLOW); fillellipse(cx, cy, 35, 35);
+    setfillstyle(1, WHITE); setcolor(WHITE); fillellipse(cx, cy, 20, 20);
 }
 
+// GUI VAT PHAM MOI
 void DrawItem(int x, int y, ItemType type) {
     if (type == ITEM_SHIELD) {
-        setfillstyle(1, LIGHTBLUE);
-        setcolor(LIGHTCYAN);
-        fillellipse(x, y, 12, 12);
+        setfillstyle(1, LIGHTBLUE); setcolor(LIGHTCYAN); fillellipse(x, y, 12, 12);
         BresenhamLine(x - 6, y, x + 6, y, WHITE);
         BresenhamLine(x, y - 6, x, y + 6, WHITE);
-    } else if (type == ITEM_SLOW) {
-        setfillstyle(1, LIGHTGREEN);
-        setcolor(GREEN);
-        fillellipse(x, y, 12, 12);
-        setcolor(WHITE);
-        BresenhamLine(x, y - 5, x, y + 2, WHITE);
-        BresenhamLine(x, y + 2, x + 4, y + 2, WHITE);
-    } else if (type == ITEM_FAST) {
-        setfillstyle(1, YELLOW);
-        setcolor(LIGHTRED);
-        fillellipse(x, y, 12, 12);
-        BresenhamLine(x - 4, y - 5, x, y, LIGHTRED);
-        BresenhamLine(x, y, x - 4, y + 5, LIGHTRED);
-        BresenhamLine(x, y - 5, x + 4, y, LIGHTRED);
-        BresenhamLine(x + 4, y, x, y + 5, LIGHTRED);
+    } else if (type == ITEM_BIG) { // Bieu tuong Phong To (Mui ten len mau do)
+        setfillstyle(1, LIGHTRED); setcolor(RED); fillellipse(x, y, 12, 12);
+        BresenhamLine(x, y - 6, x, y + 6, WHITE);
+        BresenhamLine(x, y - 6, x - 4, y - 2, WHITE);
+        BresenhamLine(x, y - 6, x + 4, y - 2, WHITE);
+    } else if (type == ITEM_SMALL) { // Bieu tuong Thu nho (Mui ten xuong mau xanh)
+        setfillstyle(1, LIGHTGREEN); setcolor(GREEN); fillellipse(x, y, 12, 12);
+        BresenhamLine(x, y - 6, x, y + 6, WHITE);
+        BresenhamLine(x, y + 6, x - 4, y + 2, WHITE);
+        BresenhamLine(x, y + 6, x + 4, y + 2, WHITE);
     }
 }
 
@@ -188,123 +164,45 @@ void DrawGround() {
 }
 
 void DrawPipe(int x, int y, bool isTop) {
-    int w = 40;        // Width of the column
-    int cap_w = 48;    // Width of the cap
-    int cap_h = 24;    // Height of the cap
-    int offset = (cap_w - w) / 2; // Offset for cap width centering
-
-    // Left and right bounds
-    int col_left = x;
-    int col_right = x + w;
-    int cap_left = x - offset;
-    int cap_right = x + w + offset;
+    int w = 40, cap_w = 48, cap_h = 24;
+    int offset = (cap_w - w) / 2; 
+    int col_left = x, col_right = x + w;
+    int cap_left = x - offset, cap_right = x + w + offset;
 
     if (!isTop) {
-        // --- BOTTOM PIPE ---
-        int cap_top = y;
-        int cap_bottom = y + cap_h;
-        int col_top = cap_bottom;
-        int col_bottom = 450;
-
-        // 1. Column (only draw if there is space)
+        int cap_top = y, cap_bottom = y + cap_h;
+        int col_top = cap_bottom, col_bottom = 450;
         if (col_bottom > col_top) {
-            // Base dark green
-            setfillstyle(1, 2);
-            bar(col_left, col_top, col_right, col_bottom);
-
-            // Shading/Highlight: Light green band on the left-middle
-            setfillstyle(1, 10);
-            bar(col_left + 6, col_top, col_left + 14, col_bottom);
-
-            // Shading/Highlight: Brightest white specular line
-            setfillstyle(1, 15);
-            bar(col_left + 8, col_top, col_left + 10, col_bottom);
-
-            // Darker shadow on the right edge
-            setfillstyle(1, 8); // DARKGRAY
-            bar(col_right - 4, col_top, col_right - 1, col_bottom);
-
-            // Outline the column in black
-            setcolor(0);
-            rectangle(col_left, col_top, col_right, col_bottom);
+            setfillstyle(1, 2); bar(col_left, col_top, col_right, col_bottom);
+            setfillstyle(1, 10); bar(col_left + 6, col_top, col_left + 14, col_bottom);
+            setfillstyle(1, 15); bar(col_left + 8, col_top, col_left + 10, col_bottom);
+            setfillstyle(1, 8); bar(col_right - 4, col_top, col_right - 1, col_bottom);
+            setcolor(0); rectangle(col_left, col_top, col_right, col_bottom);
         }
-
-        // 2. Draw Cap
-        // Base dark green
-        setfillstyle(1, 2);
-        bar(cap_left, cap_top, cap_right, cap_bottom);
-
-        // Highlight band
-        setfillstyle(1, 10);
-        bar(cap_left + 8, cap_top, cap_left + 18, cap_bottom);
-
-        // Brightest white line
-        setfillstyle(1, 15);
-        bar(cap_left + 10, cap_top, cap_left + 12, cap_bottom);
-
-        // Shadow on the right edge of cap
-        setfillstyle(1, 8);
-        bar(cap_right - 5, cap_top, cap_right - 1, cap_bottom);
-
-        // Outline cap in black
-        setcolor(0);
-        rectangle(cap_left, cap_top, cap_right, cap_bottom);
+        setfillstyle(1, 2); bar(cap_left, cap_top, cap_right, cap_bottom);
+        setfillstyle(1, 10); bar(cap_left + 8, cap_top, cap_left + 18, cap_bottom);
+        setfillstyle(1, 15); bar(cap_left + 10, cap_top, cap_left + 12, cap_bottom);
+        setfillstyle(1, 8); bar(cap_right - 5, cap_top, cap_right - 1, cap_bottom);
+        setcolor(0); rectangle(cap_left, cap_top, cap_right, cap_bottom);
     } else {
-        // --- TOP PIPE ---
-        int cap_top = y - cap_h;
-        int cap_bottom = y;
-        int col_top = y - 400;
-        int col_bottom = cap_top;
-
-        // 1. Column
+        int cap_top = y - cap_h, cap_bottom = y;
+        int col_top = y - 400, col_bottom = cap_top;
         if (col_bottom > col_top) {
-            // Base dark green
-            setfillstyle(1, 2);
-            bar(col_left, col_top, col_right, col_bottom);
-
-            // Highlight band
-            setfillstyle(1, 10);
-            bar(col_left + 6, col_top, col_left + 14, col_bottom);
-
-            // Brightest white line
-            setfillstyle(1, 15);
-            bar(col_left + 8, col_top, col_left + 10, col_bottom);
-
-            // Shadow on the right edge
-            setfillstyle(1, 8);
-            bar(col_right - 4, col_top, col_right - 1, col_bottom);
-
-            // Outline column
-            setcolor(0);
-            rectangle(col_left, col_top, col_right, col_bottom);
+            setfillstyle(1, 2); bar(col_left, col_top, col_right, col_bottom);
+            setfillstyle(1, 10); bar(col_left + 6, col_top, col_left + 14, col_bottom);
+            setfillstyle(1, 15); bar(col_left + 8, col_top, col_left + 10, col_bottom);
+            setfillstyle(1, 8); bar(col_right - 4, col_top, col_right - 1, col_bottom);
+            setcolor(0); rectangle(col_left, col_top, col_right, col_bottom);
         }
-
-        // 2. Draw Cap
-        // Base dark green
-        setfillstyle(1, 2);
-        bar(cap_left, cap_top, cap_right, cap_bottom);
-
-        // Highlight band
-        setfillstyle(1, 10);
-        bar(cap_left + 8, cap_top, cap_left + 18, cap_bottom);
-
-        // Brightest white line
-        setfillstyle(1, 15);
-        bar(cap_left + 10, cap_top, cap_left + 12, cap_bottom);
-
-        // Shadow on the right edge of cap
-        setfillstyle(1, 8);
-        bar(cap_right - 5, cap_top, cap_right - 1, cap_bottom);
-
-        // Outline cap
-        setcolor(0);
-        rectangle(cap_left, cap_top, cap_right, cap_bottom);
+        setfillstyle(1, 2); bar(cap_left, cap_top, cap_right, cap_bottom);
+        setfillstyle(1, 10); bar(cap_left + 8, cap_top, cap_left + 18, cap_bottom);
+        setfillstyle(1, 15); bar(cap_left + 10, cap_top, cap_left + 12, cap_bottom);
+        setfillstyle(1, 8); bar(cap_right - 5, cap_top, cap_right - 1, cap_bottom);
+        setcolor(0); rectangle(cap_left, cap_top, cap_right, cap_bottom);
     }
 }
 
-// =========================================================================
-// �I?M TP4: PH�P BI?N �?I AFFINE
-// =========================================================================
+/* * PHEP QUAY (ROTATION) */
 void RotatePoint(int &x, int &y, int cx, int cy, float angleDegree) {
     float rad = angleDegree * 3.14159 / 180.0;
     int tempX = x - cx;
@@ -313,19 +211,24 @@ void RotatePoint(int &x, int &y, int cx, int cy, float angleDegree) {
     y = cy + tempX * sin(rad) + tempY * cos(rad);
 }
 
-// --- LOGIC GAME CH�NH ---
+/* * PHEP CO GIAN (SCALING) */
+void ScalePoint(int &x, int &y, int cx, int cy, float s) {
+    x = cx + (int)((x - cx) * s);
+    y = cy + (int)((y - cy) * s);
+}
+
+// --- LOGIC GAME CHINH ---
 
 void init() {
     bird.td.x = 100; bird.td.y = 250; bird.angle = 0; 
     hasShield = false;
-    slowTimer = 0;
-    fastTimer = 0;
+    bigTimer = 0;
+    smallTimer = 0;
     
     for (int i = 0; i < 7; i++) {
         BR.br[i].x = 900 + i * 160;
         BR.br[i].y = rand() % 200 + 240;
         
-        // Spawn item (First 2 columns are empty to let players adjust, 15% spawn chance in random scattered positions)
         if (i >= 2 && rand() % 100 < 15) {
             BR.items[i].type = (ItemType)(rand() % 3 + 1);
             BR.items[i].active = true;
@@ -344,20 +247,28 @@ void init() {
     speed = base_speed; gravity = base_gravity;
 }
 
-// KH�I PH?C L?I T?O H�NH CHIM CU (�p d?ng TP2 & TP4)
+// KHOI PHUC LAI TAO HINH CHIM CU 
 void BIRD() {
     int bx = bird.td.x, by = bird.td.y;
-    float a = bird.angle; 
+    float a = bird.angle;
+    
+    // Ty le scale phu thuoc vao viec an duoc vat pham nao
+    float scale = 1.0;
+    if (bigTimer > 0) scale = 1.4;       // Phong to chim gap 1.4 lan
+    else if (smallTimer > 0) scale = 0.6; // Thu nho chim chi con 0.6 lan
 
-    // 1. Th�n chim
-    BresenhamCircle(bx, by, 20, YELLOW); 
+    // Than chim
+    int radius = (int)(20 * scale);
+    BresenhamCircle(bx, by, radius, YELLOW); 
     BoundaryFill(bx, by, YELLOW, YELLOW);
 
-    // 2. C�nh chim
+    // Canh chim
     int w1x = bx - 15, w1y = by;
     int w2x = bx - 35, w2y = by - 10;
     int w3x = bx - 35, w3y = by + 10;
     int w4x = bx - 15, w4y = by + 5;
+    ScalePoint(w1x, w1y, bx, by, scale); ScalePoint(w2x, w2y, bx, by, scale);
+    ScalePoint(w3x, w3y, bx, by, scale); ScalePoint(w4x, w4y, bx, by, scale);
     RotatePoint(w1x, w1y, bx, by, a); RotatePoint(w2x, w2y, bx, by, a);
     RotatePoint(w3x, w3y, bx, by, a); RotatePoint(w4x, w4y, bx, by, a);
     BresenhamLine(w1x, w1y, w2x, w2y, LIGHTRED);
@@ -368,11 +279,13 @@ void BIRD() {
     int mid_wing_y = (w1y + w2y + w3y) / 3;
     BoundaryFill(mid_wing_x, mid_wing_y, LIGHTRED, LIGHTRED);
 
-    // 3. �u�i chim
+    // Duoi chim
     int t1x = bx - 20, t1y = by - 5;
     int t2x = bx - 35, t2y = by - 15;
     int t3x = bx - 35, t3y = by - 5;
     int t4x = bx - 20, t4y = by;
+    ScalePoint(t1x, t1y, bx, by, scale); ScalePoint(t2x, t2y, bx, by, scale);
+    ScalePoint(t3x, t3y, bx, by, scale); ScalePoint(t4x, t4y, bx, by, scale);
     RotatePoint(t1x, t1y, bx, by, a); RotatePoint(t2x, t2y, bx, by, a);
     RotatePoint(t3x, t3y, bx, by, a); RotatePoint(t4x, t4y, bx, by, a);
     BresenhamLine(t1x, t1y, t2x, t2y, LIGHTRED);
@@ -383,10 +296,12 @@ void BIRD() {
     int mid_tail_y = (t1y + t2y + t3y) / 3;
     BoundaryFill(mid_tail_x, mid_tail_y, LIGHTRED, LIGHTRED);
 
-    // 4. M? chim
+    // Mo chim
     int m1x = bx + 20, m1y = by - 5;
     int m2x = bx + 35, m2y = by;
     int m3x = bx + 20, m3y = by + 5;
+    ScalePoint(m1x, m1y, bx, by, scale); ScalePoint(m2x, m2y, bx, by, scale);
+    ScalePoint(m3x, m3y, bx, by, scale); 
     RotatePoint(m1x, m1y, bx, by, a); RotatePoint(m2x, m2y, bx, by, a);
     RotatePoint(m3x, m3y, bx, by, a); 
     BresenhamLine(m1x, m1y, m2x, m2y, LIGHTRED);
@@ -396,75 +311,51 @@ void BIRD() {
     int mid_beak_y = (m1y + m2y + m3y) / 3;
     BoundaryFill(mid_beak_x, mid_beak_y, LIGHTRED, LIGHTRED);
 
-    // 5. M?t chim (Tr�ng tr?ng & tr�ng den)
+    // Mat chim 
     int eye_x = bx + 12, eye_y = by - 8;
+    ScalePoint(eye_x, eye_y, bx, by, scale); 
     RotatePoint(eye_x, eye_y, bx, by, a);
-    BresenhamCircle(eye_x, eye_y, 8, WHITE);
+    BresenhamCircle(eye_x, eye_y, (int)(8 * scale), WHITE);
     BoundaryFill(eye_x, eye_y, WHITE, WHITE);
 
     int pupil_x = bx + 14, pupil_y = by - 8;
+    ScalePoint(pupil_x, pupil_y, bx, by, scale); 
     RotatePoint(pupil_x, pupil_y, bx, by, a);
-    BresenhamCircle(pupil_x, pupil_y, 3, BLACK);
+    BresenhamCircle(pupil_x, pupil_y, (int)(3 * scale), BLACK);
     BoundaryFill(pupil_x, pupil_y, BLACK, BLACK);
 
-    // 6. Draw visual effects for active power-ups
+    // Ve Hieu ung bao ve neu co Khien
     if (hasShield) {
-        BresenhamCircle(bx, by, 28, LIGHTCYAN);
-        BresenhamCircle(bx, by, 29, BLUE);
-    }
-    if (fastTimer > 0) {
-        int tx1 = bx - 30, ty1 = by;
-        int tx2 = bx - 42, ty2 = by;
-        RotatePoint(tx1, ty1, bx, by, a);
-        RotatePoint(tx2, ty2, bx, by, a);
-        
-        setfillstyle(1, LIGHTRED);
-        setcolor(LIGHTRED);
-        fillellipse(tx1, ty1, 8, 6);
-        
-        setfillstyle(1, YELLOW);
-        setcolor(YELLOW);
-        fillellipse(tx2, ty2, 5, 4);
+        BresenhamCircle(bx, by, (int)(28 * scale), LIGHTCYAN);
+        BresenhamCircle(bx, by, (int)(29 * scale), BLUE);
     }
 }
 
 void DLBIRD() {
     setfillstyle(1, 0);
-    // X�a r?ng hon d? d?m b?o kh�ng d? l?i v?t c?a du�i/c�nh khi di chuy?n
-    bar(bird.td.x - 40, bird.td.y - 30, bird.td.x + 40, bird.td.y + 30);
+    bar(bird.td.x - 60, bird.td.y - 50, bird.td.x + 60, bird.td.y + 50);
 }
 
 void control() {
-    // Decrement active timers
-    if (slowTimer > 0) slowTimer--;
-    if (fastTimer > 0) fastTimer--;
-
-    // Dynamic Speed & Gravity adjustment based on timers
-    if (fastTimer > 0) {
-        speed = base_speed * 2;
-        gravity = base_gravity;
-    } else if (slowTimer > 0) {
-        speed = (base_speed / 2 < 2) ? 2 : base_speed / 2;
-        gravity = (base_gravity / 2 < 2) ? 2 : base_gravity / 2;
-    } else {
-        speed = base_speed;
-        gravity = base_gravity;
-    }
+    // Tru gian thoi gian vat pham dang hoat dong
+    if (bigTimer > 0) bigTimer--;
+    if (smallTimer > 0) smallTimer--;
 
     bird.td.y += gravity; 
     
-    // Xoay chim t?nh ti?n (TP4)
+    // Hieu ung quay cua chim
     if (gravity > 0) bird.angle = 15; 
     else bird.angle = -20; 
 
     if (kbhit()) { 
         char ch = getch(); 
         
-        if (ch == '0') { 
-            speed = 0; 
-            gravity = 0; 
-        } 
-        else { 
+        // Phep dieu khien toc do doc lap (TP4)
+        if (ch == '0') { speed = 0; gravity = 0; } 
+        else if (ch == '1') { base_speed = 3; speed = base_speed; }
+        else if (ch == '2') { base_speed = 5; speed = base_speed; }
+        else if (ch == '3') { base_speed = 8; speed = base_speed; }
+        else if (ch == ' ') { 
             bird.td.y -= 70; 
             bird.angle = -30; 
             playJumpSound();
@@ -483,7 +374,6 @@ void display() {
             BR.br[i].y = rand() % 200 + 200;
             currentScore++;
             
-            // Spawn random item for reset pipe (15% spawn chance in random scattered positions)
             if (rand() % 100 < 15) {
                 BR.items[i].type = (ItemType)(rand() % 3 + 1);
                 BR.items[i].active = true;
@@ -492,30 +382,23 @@ void display() {
             } else {
                 BR.items[i].type = ITEM_NONE;
                 BR.items[i].active = false;
-                BR.items[i].y = 0;
-                BR.items[i].x_offset = 0;
             }
         }
         
-        // Item collision detection (scattered random positions, away from pipe mouths)
+        // Kiem tra cham cham vao Vat pham
         if (BR.items[i].active && BR.items[i].type != ITEM_NONE) {
-            int bird_x = bird.td.x;
-            int bird_y = bird.td.y;
-            int item_x = BR.br[i].x + BR.items[i].x_offset;
-            int item_y = BR.items[i].y;
-            
-            int dx = bird_x - item_x;
-            int dy = bird_y - item_y;
+            int dx = bird.td.x - (BR.br[i].x + BR.items[i].x_offset);
+            int dy = bird.td.y - BR.items[i].y;
             if (dx * dx + dy * dy <= 1024) {
                 BR.items[i].active = false;
                 if (BR.items[i].type == ITEM_SHIELD) {
                     hasShield = true;
-                } else if (BR.items[i].type == ITEM_SLOW) {
-                    slowTimer = 250;
-                    fastTimer = 0;
-                } else if (BR.items[i].type == ITEM_FAST) {
-                    fastTimer = 150;
-                    slowTimer = 0;
+                } else if (BR.items[i].type == ITEM_BIG) {
+                    bigTimer = 250;
+                    smallTimer = 0; // Huy trang thai nho (neu co)
+                } else if (BR.items[i].type == ITEM_SMALL) {
+                    smallTimer = 250;
+                    bigTimer = 0; // Huy trang thai to (neu co)
                 }
                 playJumpSound();
             }
@@ -523,8 +406,8 @@ void display() {
     }
     
     for (int i = 0; i < 7; i++) {
-        DrawPipe(BR.br[i].x, BR.br[i].y, false);         // Bottom pipe
-        DrawPipe(BR.br[i].x, BR.br[i].y - 190, true);    // Top pipe
+        DrawPipe(BR.br[i].x, BR.br[i].y, false);         
+        DrawPipe(BR.br[i].x, BR.br[i].y - 190, true);    
         if (BR.items[i].active && BR.items[i].type != ITEM_NONE) {
             DrawItem(BR.br[i].x + BR.items[i].x_offset, BR.items[i].y, BR.items[i].type);
         }
@@ -532,16 +415,22 @@ void display() {
 }
 
 void gameover(int &thua) {
+    // Tinh lai scale de Hitbox co gian chinh xac voi kich thuoc chim
+    float scale = 1.0;
+    if (bigTimer > 0) scale = 1.4;
+    else if (smallTimer > 0) scale = 0.6;
+
+    int hit_w = (int)(25 * scale);
+    int hit_left = (int)(30 * scale);
+    int hit_h = (int)(20 * scale);
+
     for (int i = 0; i < 7; i++) {
-        if ((BR.br[i].x < bird.td.x + 25 && BR.br[i].x + 40 > bird.td.x - 30) && 
-            (bird.td.y + 20 > BR.br[i].y || bird.td.y - 20 < BR.br[i].y - 190)) {
+        if ((BR.br[i].x < bird.td.x + hit_w && BR.br[i].x + 40 > bird.td.x - hit_left) && 
+            (bird.td.y + hit_h > BR.br[i].y || bird.td.y - hit_h < BR.br[i].y - 190)) {
             
-            if (fastTimer > 0) {
-                BR.br[i].x = -50; // Destroy pipe instantly!
-                playJumpSound();
-            } else if (hasShield) {
-                hasShield = false; // Consume shield
-                BR.br[i].x = -50; // Destroy pipe instantly to prevent getting stuck
+            if (hasShield) {
+                hasShield = false; 
+                BR.br[i].x = -50; // Bop nat ong nuoc neu co khien
                 playCollisionSound();
             } else {
                 thua = 1;
@@ -551,7 +440,7 @@ void gameover(int &thua) {
     }
     
     if (bird.td.y < 0 || bird.td.y > 450) {
-        if (fastTimer > 0 || hasShield) {
+        if (hasShield) {
             if (bird.td.y < 0) bird.td.y = 10;
             if (bird.td.y > 450) bird.td.y = 440;
         } else {
@@ -565,6 +454,7 @@ void gameover(int &thua) {
     }
 }
 
+// ... [Cac ham saveHighScore, loadHighScore, showHighScore, settingMenu, login giu nguyen nhu cu, minh da an di de code ngan hon, ban cu copy full nhe] ...
 void saveHighScore(const char* name, int score) {
     FILE* file = fopen("highscore.txt", "r");
     struct HighScoreEntry scores[4]; 
@@ -724,19 +614,23 @@ int main() {
             DrawGround();
             
             setcolor(15); settextstyle(6, 0, 1); setbkcolor(9);
-            outtextxy(10, 10, "Vat pham: Khien Xanh (Bao ve) | Dong ho XanhLa (Cham) | Set Vang (Bay nhanh)");
+            
+            // HUD HUONG DAN MOI Nhat
+            outtextxy(10, 5, "Vat pham: Khien Xanh (Bao ve) | Mui ten Do (Phong to) | Mui ten Xanh (Thu nho)");
+            setcolor(14); 
+            outtextxy(10, 25, "Dieu khien: [SPACE] Nhay | [0] Dung | [1] Cham | [2] Binh Thuong | [3] Nhanh");
 
             // Render power-up HUD and Score
             char statusText[100] = "";
             if (hasShield) strcat(statusText, "KHIEN [BAT] ");
-            if (slowTimer > 0) {
+            if (bigTimer > 0) {
                 char temp[30];
-                sprintf(temp, "CHAM [%d] ", slowTimer);
+                sprintf(temp, "TO RA [%d] ", bigTimer);
                 strcat(statusText, temp);
             }
-            if (fastTimer > 0) {
+            if (smallTimer > 0) {
                 char temp[30];
-                sprintf(temp, "NHANH [%d] ", fastTimer);
+                sprintf(temp, "NHO LAI [%d] ", smallTimer);
                 strcat(statusText, temp);
             }
             settextstyle(6, 0, 2); setcolor(14); outtextxy(10, 40, statusText);
@@ -767,4 +661,3 @@ int main() {
     closegraph();
     return 0;
 }
-
