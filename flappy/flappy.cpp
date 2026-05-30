@@ -321,16 +321,16 @@ void init() {
     slowTimer = 0;
     fastTimer = 0;
     
-    for (int i = 0; i < 5; i++) {
-        BR.br[i].x = 900 + i * 200;
+    for (int i = 0; i < 7; i++) {
+        BR.br[i].x = 900 + i * 160;
         BR.br[i].y = rand() % 200 + 240;
         
         // Spawn item (First 2 columns are empty to let players adjust, 15% spawn chance in random scattered positions)
         if (i >= 2 && rand() % 100 < 15) {
             BR.items[i].type = (ItemType)(rand() % 3 + 1);
             BR.items[i].active = true;
-            BR.items[i].y = rand() % 300 + 80;
-            BR.items[i].x_offset = rand() % 100 + 50;
+            BR.items[i].y = BR.br[i].y - 140 + rand() % 90;
+            BR.items[i].x_offset = 20;
         } else {
             BR.items[i].type = ITEM_NONE;
             BR.items[i].active = false;
@@ -474,10 +474,12 @@ void control() {
 }
 
 void display() {
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 7; i++) {
         BR.br[i].x -= speed;
-        if (BR.br[i].x <= -20) {
-            BR.br[i].x = 1050;
+        if (BR.br[i].x <= -40) {
+            int max_x = 0;
+            for (int j = 0; j < 7; j++) if (BR.br[j].x > max_x) max_x = BR.br[j].x;
+            BR.br[i].x = max_x + 160;
             BR.br[i].y = rand() % 200 + 200;
             currentScore++;
             
@@ -485,8 +487,8 @@ void display() {
             if (rand() % 100 < 15) {
                 BR.items[i].type = (ItemType)(rand() % 3 + 1);
                 BR.items[i].active = true;
-                BR.items[i].y = rand() % 300 + 80;
-                BR.items[i].x_offset = rand() % 100 + 50;
+                BR.items[i].y = BR.br[i].y - 140 + rand() % 90;
+                BR.items[i].x_offset = 20;
             } else {
                 BR.items[i].type = ITEM_NONE;
                 BR.items[i].active = false;
@@ -520,7 +522,7 @@ void display() {
         }
     }
     
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 7; i++) {
         DrawPipe(BR.br[i].x, BR.br[i].y, false);         // Bottom pipe
         DrawPipe(BR.br[i].x, BR.br[i].y - 190, true);    // Top pipe
         if (BR.items[i].active && BR.items[i].type != ITEM_NONE) {
@@ -530,7 +532,7 @@ void display() {
 }
 
 void gameover(int &thua) {
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 7; i++) {
         if ((BR.br[i].x < bird.td.x + 25 && BR.br[i].x + 40 > bird.td.x - 30) && 
             (bird.td.y + 20 > BR.br[i].y || bird.td.y - 20 < BR.br[i].y - 190)) {
             
@@ -721,7 +723,7 @@ int main() {
             DrawFractalBackground();
             DrawGround();
             
-            setcolor(15); settextstyle(3, 0, 1); setbkcolor(9);
+            setcolor(15); settextstyle(6, 0, 1); setbkcolor(9);
             outtextxy(10, 10, "Vat pham: Khien Xanh (Bao ve) | Dong ho XanhLa (Cham) | Set Vang (Bay nhanh)");
 
             control();
@@ -742,8 +744,8 @@ int main() {
                 sprintf(temp, "NHANH [%d] ", fastTimer);
                 strcat(statusText, temp);
             }
-            setfillstyle(1, 9); bar(500, 10, 780, 50);
-            setbkcolor(9); settextstyle(6, 0, 2); setcolor(14); outtextxy(500, 10, statusText);
+            setfillstyle(1, 9); bar(10, 40, 500, 70);
+            setbkcolor(9); settextstyle(6, 0, 2); setcolor(14); outtextxy(10, 40, statusText);
 
             char scoreText[50]; sprintf(scoreText, "Diem: %d", currentScore);
             setfillstyle(1, 9); bar(800, 10, 1050, 50);
