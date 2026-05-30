@@ -587,10 +587,18 @@ void login() {
     else if (choice == 3) { settingMenu(); login(); }
 }
 
-void playBackgroundMusic() { if (musicOn) PlaySound(TEXT("background.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_LOOP); }
-void stopBackgroundMusic() { PlaySound(NULL, NULL, 0); }
-void playJumpSound() { if (soundOn) PlaySound(TEXT("jump.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT); }
-void playCollisionSound() { if (soundOn) PlaySound(TEXT("collision.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT); }
+void playBackgroundMusic() { 
+    if (musicOn) PlaySound(TEXT("background.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_LOOP); 
+}
+void stopBackgroundMusic() { 
+    PlaySound(NULL, NULL, 0); 
+}
+void playJumpSound() { 
+    if (soundOn) Beep(750, 30); // Tieng bip nho, ngan (30ms) khong ngat nhac nen
+}
+void playCollisionSound() { 
+    if (soundOn) Beep(300, 100); // Tieng thud tram (100ms) khi va cham
+}
 
 int main() {
     initwindow(1050, 600);
